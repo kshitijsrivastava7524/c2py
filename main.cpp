@@ -6,8 +6,23 @@
 #include "Lexer.h"  // Assumed to provide Token, TokenType, tokenTypeToString, and Lexer class
 #include "Parser.h" // Provides ASTNode derived classes and Parser class
 #include "Transpiler.h"
+#include <fstream>
+#include <sstream>
 using namespace std;
 
+string readFile(const string &filename)
+{
+    ifstream file(filename);
+    if (!file.is_open())
+    {
+        cerr << "Could not open the file: " << filename << endl;
+        return "";
+    }
+
+    stringstream buffer;
+    buffer << file.rdbuf(); // Reads the entire file into the buffer
+    return buffer.str();
+}
 // Helper to print indentation
 void printIndent(int indent)
 {
@@ -316,35 +331,36 @@ void printAST(const shared_ptr<ASTNode> &node, int indent)
 
 int main()
 {
-    string source_code = R"(
-        int calculateSum(int a, int b) {
-            int result;
-            result = a + b;
-            return result;
-        }
+    //     string source_code = R"(
+    //         int calculateSum(int a, int b) {
+    //             int result;
+    //             result = a + b;
+    //             return result;
+    //         }
 
-        void main() {
-            int x = 10;
-            int y;
-            y = 20;
-            if (x > 5) {
-                x = x + (y * 2);
-                calculateSum(x, y); // Expression statement with function call
-            } else {
-                x = 0;
-            }
-            while (x < 15) {
-                x = x + 1;
-            }
-            for (int i = 0; i < 56; i = i + 1) {
-                y = y - 1;
-            } 
-            int arr[3];
-arr[0] = 5;
-arr[1] = 7;
-            return 0; // Return with no value (void context)
-        }
-    )";
+    //         void main() {
+    //             int x = 10;
+    //             int y;
+    //             y = 20;
+    //             if (x > 5) {
+    //                 x = x + (y * 2);
+    //                 calculateSum(x, y); // Expression statement with function call
+    //             } else {
+    //                 x = 0;
+    //             }
+    //             while (x < 15) {
+    //                 x = x + 1;
+    //             }
+    //             for (int i = 0; i < 56; i = i + 1) {
+    //                 y = y - 1;
+    //             }
+    //             int arr[3];
+    // arr[0] = 5;
+    // arr[1] = 7;
+    //             return 0; // Return with no value (void context)
+    //         }
+    //     )";
+    string source_code = readFile("ccode.txt"); // Read C code from file
 
     Lexer lexer(source_code);
     vector<Token> tokens = lexer.tokenize();
