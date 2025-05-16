@@ -1,5 +1,7 @@
 {
-    "files.associations": {
-        "memory": "cpp"
-    }
+  "files.associations": {
+    "*.ejs": "html",
+    "memory": "cpp",
+    "stdexcept": "cpp"
+  }
 }

@@ -3,25 +3,34 @@
 #include <iostream> // For cerr
 using namespace std;
 
-Parser::Parser(const vector<Token>& tokens) : tokens(tokens), current(0) {}
+Parser::Parser(const vector<Token> &tokens) : tokens(tokens), current(0) {}
 
 // Changed return type to ProgramNode to match declaration
-shared_ptr<ProgramNode> Parser::parse() {
-    try {
+shared_ptr<ProgramNode> Parser::parse()
+{
+    try
+    {
         return parseProgram();
-    } catch (const runtime_error& e) {
+    }
+    catch (const runtime_error &e)
+    {
         cerr << "Parse error: " << e.what() << endl;
         // Depending on severity, you might want to return nullptr or an empty ProgramNode
         return make_shared<ProgramNode>(); // Return an empty program on major error
     }
 }
 
-shared_ptr<ProgramNode> Parser::parseProgram() {
+shared_ptr<ProgramNode> Parser::parseProgram()
+{
     auto programNode = make_shared<ProgramNode>();
-    while (!isAtEnd()) {
-        try {
+    while (!isAtEnd())
+    {
+        try
+        {
             programNode->addChild(parseStatement());
-        } catch (const runtime_error& e) {
+        }
+        catch (const runtime_error &e)
+        {
             cerr << "Error parsing statement: " << e.what() << endl;
             synchronize(); // Attempt to recover
         }
@@ -29,19 +38,28 @@ shared_ptr<ProgramNode> Parser::parseProgram() {
     return programNode;
 }
 
-shared_ptr<StatementNode> Parser::parseStatement() {
-    if (match(TokenType::Keyword, "if")) return parseIf();
-    if (match(TokenType::Keyword, "while")) return parseWhile();
-    if (match(TokenType::Keyword, "for")) return parseFor();
-    if (match(TokenType::Keyword, "return")) return parseReturn();
-    if (match(TokenType::Keyword, "break")) return parseBreak();
-    if (match(TokenType::Keyword, "continue")) return parseContinue();
-    if (match(TokenType::Symbol, "{")) return parseBlock();
+shared_ptr<StatementNode> Parser::parseStatement()
+{
+    if (match(TokenType::Keyword, "if"))
+        return parseIf();
+    if (match(TokenType::Keyword, "while"))
+        return parseWhile();
+    if (match(TokenType::Keyword, "for"))
+        return parseFor();
+    if (match(TokenType::Keyword, "return"))
+        return parseReturn();
+    if (match(TokenType::Keyword, "break"))
+        return parseBreak();
+    if (match(TokenType::Keyword, "continue"))
+        return parseContinue();
+    if (match(TokenType::Symbol, "{"))
+        return parseBlock();
 
     // Check for type keywords for declarations
     if (check(TokenType::Keyword, "int") || check(TokenType::Keyword, "char") ||
         check(TokenType::Keyword, "bool") || check(TokenType::Keyword, "string") ||
-        check(TokenType::Keyword, "void")) {
+        check(TokenType::Keyword, "void"))
+    {
         // Peek ahead to see if it's a function declaration (identifier followed by '(')
         // or variable declaration. parseDeclaration will handle this.
         return parseDeclaration();
@@ -49,14 +67,16 @@ shared_ptr<StatementNode> Parser::parseStatement() {
 
     // Check for assignment statement: Identifier = ... ;
     // This must come before general expression statement
-    if (check(TokenType::Identifier) && peek(1).type == TokenType::Operator && peek(1).value == "=") {
+    if (check(TokenType::Identifier) && peek(1).type == TokenType::Operator && peek(1).value == "=")
+    {
         return parseAssignmentStatement();
     }
-    
+
     return parseExpressionStatement();
 }
 
-shared_ptr<AssignmentStatementNode> Parser::parseAssignmentStatement() {
+shared_ptr<AssignmentStatementNode> Parser::parseAssignmentStatement()
+{
     // Assumes current token is Identifier, next is '='
     string identifier = consume(TokenType::Identifier, "Expected identifier in assignment statement.").value;
     consume(TokenType::Operator, "=", "Expected '=' in assignment statement."); // Consume '='
@@ -70,24 +90,27 @@ shared_ptr<AssignmentStatementNode> Parser::parseAssignmentStatement() {
     return make_shared<AssignmentStatementNode>(assignNode);
 }
 
-
-shared_ptr<ExpressionStatementNode> Parser::parseExpressionStatement() {
+shared_ptr<ExpressionStatementNode> Parser::parseExpressionStatement()
+{
     auto expr = parseExpression();
     consume(TokenType::Symbol, ";", "Expected ';' after expression statement.");
     return make_shared<ExpressionStatementNode>(expr);
 }
 
-shared_ptr<BlockNode> Parser::parseBlock() {
+shared_ptr<BlockNode> Parser::parseBlock()
+{
     // Opening '{' was matched by parseStatement to enter here
     auto blockNode = make_shared<BlockNode>();
-    while (!check(TokenType::Symbol, "}") && !isAtEnd()) {
+    while (!check(TokenType::Symbol, "}") && !isAtEnd())
+    {
         blockNode->addChild(parseStatement());
     }
     consume(TokenType::Symbol, "}", "Expected '}' after block.");
     return blockNode;
 }
 
-shared_ptr<IfNode> Parser::parseIf() {
+shared_ptr<IfNode> Parser::parseIf()
+{
     // 'if' keyword was matched by parseStatement
     auto ifNode = make_shared<IfNode>();
     consume(TokenType::Symbol, "(", "Expected '(' after 'if'.");
@@ -95,13 +118,15 @@ shared_ptr<IfNode> Parser::parseIf() {
     consume(TokenType::Symbol, ")", "Expected ')' after if condition.");
     ifNode->setThenBranch(parseStatement());
 
-    if (match(TokenType::Keyword, "else")) {
+    if (match(TokenType::Keyword, "else"))
+    {
         ifNode->setElseBranch(parseStatement());
     }
     return ifNode;
 }
 
-shared_ptr<WhileNode> Parser::parseWhile() {
+shared_ptr<WhileNode> Parser::parseWhile()
+{
     // 'while' keyword was matched
     auto whileNode = make_shared<WhileNode>();
     consume(TokenType::Symbol, "(", "Expected '(' after 'while'.");
@@ -111,33 +136,41 @@ shared_ptr<WhileNode> Parser::parseWhile() {
     return whileNode;
 }
 
-shared_ptr<ForNode> Parser::parseFor() {
+shared_ptr<ForNode> Parser::parseFor()
+{
     // 'for' keyword was matched
     auto forNode = make_shared<ForNode>();
     consume(TokenType::Symbol, "(", "Expected '(' after 'for'.");
 
     // Initializer
-    if (!match(TokenType::Symbol, ";")) { // If not an empty initializer part
+    if (!match(TokenType::Symbol, ";"))
+    { // If not an empty initializer part
         if (check(TokenType::Keyword, "int") || check(TokenType::Keyword, "char") ||
-            check(TokenType::Keyword, "bool") || check(TokenType::Keyword, "string")) {
+            check(TokenType::Keyword, "bool") || check(TokenType::Keyword, "string"))
+        {
             forNode->setInitializer(parseVariableDeclaration()); // Expects var decl ending in ';'
-        } else {
+        }
+        else
+        {
             forNode->setInitializer(parseExpressionStatement()); // Expects expr ending in ';'
         }
-    } else {
+    }
+    else
+    {
         // Semicolon was matched, initializer is null (or an "empty statement node" if needed)
-         forNode->setInitializer(nullptr); // Or a specific EmptyStatementNode
+        forNode->setInitializer(nullptr); // Or a specific EmptyStatementNode
     }
 
-
     // Condition
-    if (!check(TokenType::Symbol, ";")) { // If there's a condition part
+    if (!check(TokenType::Symbol, ";"))
+    { // If there's a condition part
         forNode->setCondition(parseExpression());
     }
     consume(TokenType::Symbol, ";", "Expected ';' after for condition.");
 
     // Increment
-    if (!check(TokenType::Symbol, ")")) { // If there's an increment part
+    if (!check(TokenType::Symbol, ")"))
+    {                                             // If there's an increment part
         forNode->setIncrement(parseExpression()); // The expression itself, not an ExprStmt
     }
     consume(TokenType::Symbol, ")", "Expected ')' after for clauses.");
@@ -146,29 +179,34 @@ shared_ptr<ForNode> Parser::parseFor() {
     return forNode;
 }
 
-shared_ptr<ReturnNode> Parser::parseReturn() {
+shared_ptr<ReturnNode> Parser::parseReturn()
+{
     // 'return' keyword was matched
     auto returnNode = make_shared<ReturnNode>();
-    if (!check(TokenType::Symbol, ";")) {
+    if (!check(TokenType::Symbol, ";"))
+    {
         returnNode->addChild(parseExpression());
     }
     consume(TokenType::Symbol, ";", "Expected ';' after return statement.");
     return returnNode;
 }
 
-shared_ptr<BreakNode> Parser::parseBreak() {
+shared_ptr<BreakNode> Parser::parseBreak()
+{
     // 'break' keyword was matched
     consume(TokenType::Symbol, ";", "Expected ';' after break statement.");
     return make_shared<BreakNode>();
 }
 
-shared_ptr<ContinueNode> Parser::parseContinue() {
+shared_ptr<ContinueNode> Parser::parseContinue()
+{
     // 'continue' keyword was matched
     consume(TokenType::Symbol, ";", "Expected ';' after continue statement.");
     return make_shared<ContinueNode>();
 }
 
-shared_ptr<StatementNode> Parser::parseDeclaration() {
+shared_ptr<StatementNode> Parser::parseDeclaration()
+{
     // Type keyword (int, char, etc.) was checked by parseStatement
     // It's not consumed yet by parseStatement if it calls parseDeclaration directly.
     // However, the original logic might have assumed `advance()` then `consume(identifier)` *before* deciding
@@ -177,51 +215,74 @@ shared_ptr<StatementNode> Parser::parseDeclaration() {
     string typeStr = advance().value; // Consume type keyword (e.g., "int")
     string identifierStr = consume(TokenType::Identifier, "Expected identifier after type in declaration.").value;
 
-    if (check(TokenType::Symbol, "(")) {
+    if (check(TokenType::Symbol, "("))
+    {
         return parseFunctionDeclaration(typeStr, identifierStr);
-    } else {
+    }
+    else
+    {
         return parseVariableDeclaration(typeStr, identifierStr);
     }
 }
 
 shared_ptr<VariableDeclarationNode> Parser::parseVariableDeclaration(
-    const string& typeHint, const string& identifierHint) {
-    
+    const string &typeHint, const string &identifierHint)
+{
+    bool isArray = false;
+    shared_ptr<ExpressionNode> arraySize = nullptr;
+
+    if (match(TokenType::Symbol, "["))
+    {
+        isArray = true;
+        arraySize = parseExpression(); // e.g., `5` in `int arr[5];`
+        consume(TokenType::Symbol, "]", "Expected ']' after '[' in array declaration.");
+    }
     string actualType = typeHint;
     string actualIdentifier = identifierHint;
 
     // If hints are empty, it means this was called from a context like 'for' loop init
     // where the type keyword is current, and identifier is next.
-    if (actualType.empty()) {
+    if (actualType.empty())
+    {
         // Caller (e.g. parseFor) must ensure current token IS a type keyword
         // e.g., check(TokenType::Keyword, "int")
         actualType = advance().value; // Consume the type keyword
     }
-    if (actualIdentifier.empty()) {
+    if (actualIdentifier.empty())
+    {
         actualIdentifier = consume(TokenType::Identifier, "Expected identifier in variable declaration.").value;
     }
-
-    auto varDeclNode = make_shared<VariableDeclarationNode>(actualIdentifier, actualType);
-    if (match(TokenType::Operator, "=")) {
-        varDeclNode->addChild(parseExpression()); // Initializer is a child
+    auto varDeclNode = make_shared<VariableDeclarationNode>(actualIdentifier, actualType, isArray);
+    if (isArray)
+    {
+        varDeclNode->addChild(arraySize); // arraySize is not an initializer, it's a child representing the size
     }
+    else if (match(TokenType::Operator, "="))
+    {
+        varDeclNode->addChild(parseExpression()); // Only non-array vars can have initializers directly
+    }
+
     consume(TokenType::Symbol, ";", "Expected ';' after variable declaration.");
     return varDeclNode;
 }
 
 shared_ptr<FunctionDeclarationNode> Parser::parseFunctionDeclaration(
-    const string& returnType, const string& identifier) {
+    const string &returnType, const string &identifier)
+{
     // Type and identifier name are already consumed and passed as arguments.
     // Current token is '('.
     auto funcDeclNode = make_shared<FunctionDeclarationNode>(identifier, returnType);
     consume(TokenType::Symbol, "(", "Expected '(' after function name.");
 
-    if (!check(TokenType::Symbol, ")")) {
-        do {
+    if (!check(TokenType::Symbol, ")"))
+    {
+        do
+        {
             // Ensure type is a keyword, not just any identifier
             if (!(check(TokenType::Keyword, "int") || check(TokenType::Keyword, "char") ||
                   check(TokenType::Keyword, "bool") || check(TokenType::Keyword, "string") ||
-                  check(TokenType::Keyword, "void"))) {
+                  check(TokenType::Keyword, "void")))
+            {
                 throw runtime_error("Expected type keyword for parameter, got " + peek().toString());
             }
             string paramType = advance().value; // Consume param type
@@ -231,70 +292,137 @@ shared_ptr<FunctionDeclarationNode> Parser::parseFunctionDeclaration(
     }
     consume(TokenType::Symbol, ")", "Expected ')' after parameters.");
 
-    if (match(TokenType::Symbol, "{")) { // Function definition with body
+    if (match(TokenType::Symbol, "{"))
+    { // Function definition with body
         auto bodyBlock = make_shared<BlockNode>();
-         while (!check(TokenType::Symbol, "}") && !isAtEnd()) {
+        while (!check(TokenType::Symbol, "}") && !isAtEnd())
+        {
             bodyBlock->addChild(parseStatement());
         }
         consume(TokenType::Symbol, "}", "Expected '}' after function body.");
         funcDeclNode->setBody(bodyBlock);
-    } else {
+    }
+    else
+    {
+        funcDeclNode->setBody(nullptr);
         consume(TokenType::Symbol, ";", "Expected ';' after function declaration (for prototype or missing body).");
         // Body remains nullptr for prototype
     }
     return funcDeclNode;
 }
 
-
 // Expression parsing (Pratt parser style or precedence climbing)
-shared_ptr<ExpressionNode> Parser::parseExpression() {
+shared_ptr<ExpressionNode> Parser::parseExpression()
+{
     return parseAssignmentExpression(); // Lowest precedence: assignment
 }
-
-shared_ptr<ExpressionNode> Parser::parseAssignmentExpression() {
+/*
+shared_ptr<ExpressionNode> Parser::parseAssignmentExpression()
+{
     auto left = parseLogicalOr(); // Parse higher precedence stuff first
+    if (auto arrayAccess = dynamic_pointer_cast<ArrayAccessNode>(left))
+    {
+        auto value = parseAssignmentExpression();
+        auto assignNode = make_shared<AssignmentNode>(arrayAccess->getArrayName());
+        assignNode->addChild(value);
+        assignNode->addChild(arrayAccess->getIndex()); // Track the index
+        return assignNode;
+    }
+    if (match(TokenType::Operator, "="))
+    { // Assignment operator
+    // Assignment is right-associative
+    // Target must be an l-value (e.g., IdentifierNode)
+    if (auto identNode = dynamic_pointer_cast<IdentifierNode>(left))
+    {
+        auto value = parseAssignmentExpression(); // Recursively parse RHS
+        auto assignNode = make_shared<AssignmentNode>(identNode->getName());
+        assignNode->addChild(value);
+        return assignNode;
+    }
+    // Could also handle other l-values like array access or member access here
+    throw runtime_error("Invalid assignment target. Expected identifier, got " + left->type_name);
+}
+return left; // Not an assignment
+}
+*/
+shared_ptr<ExpressionNode> Parser::parseAssignmentExpression()
+{
+    auto left = parseLogicalOr(); // Parse left side first
 
-    if (match(TokenType::Operator, "=")) { // Assignment operator
-        // Assignment is right-associative
-        // Target must be an l-value (e.g., IdentifierNode)
-        if (auto identNode = dynamic_pointer_cast<IdentifierNode>(left)) {
-            auto value = parseAssignmentExpression(); // Recursively parse RHS
+    // Check if next token is '=' operator
+    if (match(TokenType::Operator, "="))
+    {
+        // Parse right-hand side recursively (right-associative)
+        auto right = parseAssignmentExpression();
+
+        // Determine what type of left expression we have
+
+        // If left is simple identifier (variable)
+        if (auto identNode = dynamic_pointer_cast<IdentifierNode>(left))
+        {
             auto assignNode = make_shared<AssignmentNode>(identNode->getName());
-            assignNode->addChild(value);
+            assignNode->addChild(right);
             return assignNode;
         }
-        // Could also handle other l-values like array access or member access here
-        throw runtime_error("Invalid assignment target. Expected identifier, got " + left->type_name);
+        // If left is an array access expression
+        else if (auto arrayAccessNode = dynamic_pointer_cast<ArrayAccessNode>(left))
+        {
+            // Create assignment node targeting array element
+            auto assignNode = make_shared<AssignmentNode>(arrayAccessNode->getArrayName());
+            assignNode->addChild(right);                       // assigned value
+            assignNode->addChild(arrayAccessNode->getIndex()); // index expression
+            return assignNode;
+        }
+        else
+        {
+            throw runtime_error("Invalid assignment target. Expected identifier or array access, got " + left->type_name);
+        }
     }
-    return left; // Not an assignment
+
+    // Not an assignment, just return left expression as is
+    return left;
 }
 
-shared_ptr<ExpressionNode> Parser::parseLogicalOr() {
-    return parseBinaryExpression([this]() { return parseLogicalAnd(); }, {"||"});
+shared_ptr<ExpressionNode> Parser::parseLogicalOr()
+{
+    return parseBinaryExpression([this]()
+                                 { return parseLogicalAnd(); }, {"||"});
 }
 
-shared_ptr<ExpressionNode> Parser::parseLogicalAnd() {
-    return parseBinaryExpression([this]() { return parseEquality(); }, {"&&"});
+shared_ptr<ExpressionNode> Parser::parseLogicalAnd()
+{
+    return parseBinaryExpression([this]()
+                                 { return parseEquality(); }, {"&&"});
 }
 
-shared_ptr<ExpressionNode> Parser::parseEquality() {
-    return parseBinaryExpression([this]() { return parseComparison(); }, {"==", "!="});
+shared_ptr<ExpressionNode> Parser::parseEquality()
+{
+    return parseBinaryExpression([this]()
+                                 { return parseComparison(); }, {"==", "!="});
 }
 
-shared_ptr<ExpressionNode> Parser::parseComparison() {
-    return parseBinaryExpression([this]() { return parseTerm(); }, {"<", ">", "<=", ">="});
+shared_ptr<ExpressionNode> Parser::parseComparison()
+{
+    return parseBinaryExpression([this]()
+                                 { return parseTerm(); }, {"<", ">", "<=", ">="});
 }
 
-shared_ptr<ExpressionNode> Parser::parseTerm() {
-    return parseBinaryExpression([this]() { return parseFactor(); }, {"+", "-"});
+shared_ptr<ExpressionNode> Parser::parseTerm()
+{
+    return parseBinaryExpression([this]()
+                                 { return parseFactor(); }, {"+", "-"});
 }
 
-shared_ptr<ExpressionNode> Parser::parseFactor() {
-    return parseBinaryExpression([this]() { return parseUnary(); }, {"*", "/", "%"});
+shared_ptr<ExpressionNode> Parser::parseFactor()
+{
+    return parseBinaryExpression([this]()
+                                 { return parseUnary(); }, {"*", "/", "%"});
 }
 
-shared_ptr<ExpressionNode> Parser::parseUnary() {
-    if (match(TokenType::Operator, "!") || match(TokenType::Operator, "-")) {
+shared_ptr<ExpressionNode> Parser::parseUnary()
+{
+    if (match(TokenType::Operator, "!") || match(TokenType::Operator, "-"))
+    {
         string op = previous().value;
         auto operand = parseUnary(); // Unary operators are often right-associative
         auto unaryNode = make_shared<UnaryExpressionNode>(op);
@@ -304,21 +432,29 @@ shared_ptr<ExpressionNode> Parser::parseUnary() {
     return parseCall(); // Or primary, if call is part of primary or a separate higher precedence
 }
 
-shared_ptr<ExpressionNode> Parser::parseCall() {
+shared_ptr<ExpressionNode> Parser::parseCall()
+{
     auto expr = parsePrimary(); // Parse the "base" of the call (e.g., function name)
 
-    while (true) {
-        if (match(TokenType::Symbol, "(")) { // Function call
-            if (auto identNode = dynamic_pointer_cast<IdentifierNode>(expr)) {
+    while (true)
+    {
+        if (match(TokenType::Symbol, "("))
+        { // Function call
+            if (auto identNode = dynamic_pointer_cast<IdentifierNode>(expr))
+            {
                 auto callNode = make_shared<FunctionCallNode>(identNode->getName());
-                if (!check(TokenType::Symbol, ")")) {
-                    do {
+                if (!check(TokenType::Symbol, ")"))
+                {
+                    do
+                    {
                         callNode->addChild(parseExpression()); // Arguments are expressions
                     } while (match(TokenType::Symbol, ","));
                 }
                 consume(TokenType::Symbol, ")", "Expected ')' after function call arguments.");
                 expr = callNode; // The result of the call is the new current expression
-            } else {
+            }
+            else
+            {
                 // e.g. (1+2)() is not a valid call
                 throw runtime_error("Expression before '(' is not a callable identifier.");
             }
@@ -329,22 +465,45 @@ shared_ptr<ExpressionNode> Parser::parseCall() {
             // ... handle member access ...
             // expr = ... make MemberAccessNode ...
         } */
-        else {
-            break; // No more call-like operators
+        else if (match(TokenType::Symbol, "["))
+        {
+            if (auto identNode = dynamic_pointer_cast<IdentifierNode>(expr))
+            {
+                auto arrayAccessNode = make_shared<ArrayAccessNode>(identNode->getName());
+                arrayAccessNode->addChild(parseExpression()); // index
+                consume(TokenType::Symbol, "]", "Expected ']' after array index.");
+                expr = arrayAccessNode;
+            }
+            else
+            {
+                throw runtime_error("Expected identifier before '[' for array access.");
+            }
+        }
+        else
+        {
+            break;
         }
     }
     return expr;
 }
 
-shared_ptr<ExpressionNode> Parser::parsePrimary() {
-    if (match(TokenType::Keyword, "true")) return make_shared<BooleanNode>(true);
-    if (match(TokenType::Keyword, "false")) return make_shared<BooleanNode>(false);
-    if (match(TokenType::IntegerNumber) || match(TokenType::FloatNumber)) return make_shared<NumberNode>(previous().value);
-    if (match(TokenType::StringLiteral)) return make_shared<StringLiteralNode>(previous().value);
-    if (match(TokenType::CharLiteral)) return make_shared<CharLiteralNode>(previous().value);
-    if (match(TokenType::Identifier)) return make_shared<IdentifierNode>(previous().value);
+shared_ptr<ExpressionNode> Parser::parsePrimary()
+{
+    if (match(TokenType::Keyword, "true"))
+        return make_shared<BooleanNode>(true);
+    if (match(TokenType::Keyword, "false"))
+        return make_shared<BooleanNode>(false);
+    if (match(TokenType::IntegerNumber) || match(TokenType::FloatNumber))
+        return make_shared<NumberNode>(previous().value);
+    if (match(TokenType::StringLiteral))
+        return make_shared<StringLiteralNode>(previous().value);
+    if (match(TokenType::CharLiteral))
+        return make_shared<CharLiteralNode>(previous().value);
+    if (match(TokenType::Identifier))
+        return make_shared<IdentifierNode>(previous().value);
 
-    if (match(TokenType::Symbol, "(")) {
+    if (match(TokenType::Symbol, "("))
+    {
         auto expr = parseExpression();
         consume(TokenType::Symbol, ")", "Expected ')' after grouped expression.");
         return expr;
@@ -353,17 +512,20 @@ shared_ptr<ExpressionNode> Parser::parsePrimary() {
     throw runtime_error("Expected primary expression, got " + peek().toString() + " (type: " + tokenTypeToString(peek().type) + ")");
 }
 
-
 shared_ptr<ExpressionNode> Parser::parseBinaryExpression(
     function<shared_ptr<ExpressionNode>()> parseOperand,
-    const vector<string>& operators) {
+    const vector<string> &operators)
+{
     auto left = parseOperand();
 
-    while (true) {
+    while (true)
+    {
         bool matchedOperator = false;
-        for (const auto& opStr : operators) {
+        for (const auto &opStr : operators)
+        {
             // Operators can be actual operators (==, !=, +, *) or symbols (&&, || if lexed as symbols)
-            if (match(TokenType::Operator, opStr) || match(TokenType::Symbol, opStr)) {
+            if (match(TokenType::Operator, opStr) || match(TokenType::Symbol, opStr))
+            {
                 Token opToken = previous(); // The matched operator token
                 auto right = parseOperand();
                 auto binaryNode = make_shared<BinaryExpressionNode>(opToken.value);
@@ -371,106 +533,132 @@ shared_ptr<ExpressionNode> Parser::parseBinaryExpression(
                 binaryNode->addChild(right);
                 left = binaryNode; // For left-associativity
                 matchedOperator = true;
-                break; 
+                break;
             }
         }
-        if (!matchedOperator) break;
+        if (!matchedOperator)
+            break;
     }
     return left;
 }
 
-
 // Token handling utility methods
-Token Parser::advance() {
-    if (!isAtEnd()) current++;
+Token Parser::advance()
+{
+    if (!isAtEnd())
+        current++;
     return previous();
 }
 
-Token Parser::peek(int offset) const {
-    if (isAtEnd() && offset >= 0) return tokens.back(); // usually EOF token
+Token Parser::peek(int offset) const
+{
+    if (isAtEnd() && offset >= 0)
+        return tokens.back(); // usually EOF token
     size_t target_idx = current + offset;
-    if (target_idx < tokens.size()) { // target_idx >= 0 since current and offset can be 0
+    if (target_idx < tokens.size())
+    { // target_idx >= 0 since current and offset can be 0
         return tokens[target_idx];
     }
     return tokens.back(); // Return last token (EOF) if out of bounds
 }
 
-Token Parser::previous() const {
-    if (current == 0) throw out_of_range("No previous token at the beginning.");
+Token Parser::previous() const
+{
+    if (current == 0)
+        throw out_of_range("No previous token at the beginning.");
     return tokens[current - 1];
 }
 
-bool Parser::isAtEnd() const {
+bool Parser::isAtEnd() const
+{
     return current >= tokens.size() || tokens[current].type == TokenType::EndOfFile;
 }
 
-bool Parser::match(TokenType type) {
-    if (check(type)) {
+bool Parser::match(TokenType type)
+{
+    if (check(type))
+    {
         advance();
         return true;
     }
     return false;
 }
 
-bool Parser::match(TokenType type, const string& value) {
-    if (check(type, value)) {
+bool Parser::match(TokenType type, const string &value)
+{
+    if (check(type, value))
+    {
         advance();
         return true;
     }
     return false;
 }
 
-bool Parser::check(TokenType type) const {
-    if (isAtEnd()) return false;
+bool Parser::check(TokenType type) const
+{
+    if (isAtEnd())
+        return false;
     return tokens[current].type == type;
 }
 
-bool Parser::check(TokenType type, const string& value) const {
-    if (isAtEnd()) return false;
+bool Parser::check(TokenType type, const string &value) const
+{
+    if (isAtEnd())
+        return false;
     return tokens[current].type == type && tokens[current].value == value;
 }
 
-Token Parser::consume(TokenType type, const string& message) {
-    if (check(type)) {
+Token Parser::consume(TokenType type, const string &message)
+{
+    if (check(type))
+    {
         return advance();
     }
     throw runtime_error(message + " Expected " + tokenTypeToString(type) +
-                             ", but got " + peek().toString() +
-                             " (type: " + tokenTypeToString(peek().type) + ") at token index " + to_string(current) + ".");
+                        ", but got " + peek().toString() +
+                        " (type: " + tokenTypeToString(peek().type) + ") at token index " + to_string(current) + ".");
 }
 
-void Parser::consume(TokenType type, const string& value, const string& message) {
-    if (check(type, value)) {
+void Parser::consume(TokenType type, const string &value, const string &message)
+{
+    if (check(type, value))
+    {
         advance();
         return;
     }
     throw runtime_error(message + " Expected '" + value + "' (type " + tokenTypeToString(type) +
-                             "), but got " + peek().toString() +
-                             " (type: " + tokenTypeToString(peek().type) + ") at token index " + to_string(current) + ".");
+                        "), but got " + peek().toString() +
+                        " (type: " + tokenTypeToString(peek().type) + ") at token index " + to_string(current) + ".");
 }
 
-void Parser::synchronize() {
+void Parser::synchronize()
+{
     advance(); // Consume the erroneous token
 
-    while (!isAtEnd()) {
-        if (previous().type == TokenType::Symbol && previous().value == ";") return; // End of a statement
+    while (!isAtEnd())
+    {
+        if (previous().type == TokenType::Symbol && previous().value == ";")
+            return; // End of a statement
 
         // Synchronize to the beginning of the next likely statement or declaration
-        switch (peek().type) {
-            case TokenType::Keyword:
-                if (peek().value == "if" || peek().value == "while" || peek().value == "for" ||
-                    peek().value == "return" || peek().value == "break" || peek().value == "continue" ||
-                    peek().value == "int" || peek().value == "char" || peek().value == "bool" ||
-                    peek().value == "string" || peek().value == "void") {
-                    return;
-                }
-                break;
-            case TokenType::Symbol:
-                if (peek().value == "}") return; // End of a block
-                break;
-            // Potentially add other synchronization points
-            default:
-                break;
+        switch (peek().type)
+        {
+        case TokenType::Keyword:
+            if (peek().value == "if" || peek().value == "while" || peek().value == "for" ||
+                peek().value == "return" || peek().value == "break" || peek().value == "continue" ||
+                peek().value == "int" || peek().value == "char" || peek().value == "bool" ||
+                peek().value == "string" || peek().value == "void")
+            {
+                return;
+            }
+            break;
+        case TokenType::Symbol:
+            if (peek().value == "}")
+                return; // End of a block
+            break;
+        // Potentially add other synchronization points
+        default:
+            break;
         }
         advance();
     }

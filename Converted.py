@@ -14,7 +14,10 @@ def main():
     while x < 15:
         x = x + 1
     i = 0
-    while i < 3:
+    while i < 56:
         y = y - 1
         i = i + 1
+    arr = 3
+    arr = 5
+    arr = 7
     return 0
